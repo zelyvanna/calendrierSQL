@@ -1,5 +1,14 @@
 <?php
 
+//TODO: Cookies for users...
+/*
+ * – Pas de connexion, identifiés par cookie
+    – Ils peuvent voir tous les événements mais uniquement
+    modifier leurs événements
+    – Un administrateur a tous les droits
+ */
+
+
 // Connexion db
 try {
     $db = new PDO('mysql:host=localhost:3306;dbname=calendrier;charset=utf8',
@@ -14,17 +23,15 @@ try {
 if (isset($_REQUEST['date']) && isset($_REQUEST['title']) && isset($_REQUEST['action']) && $_REQUEST['action'] == 'save') {
     $date = $_REQUEST['date'];
     $title = $_REQUEST['title'];
-    if (isset($_REQUEST['image']) && $_REQUEST['image']) {
-        $image_name = $_REQUEST['image'];
-        // Bonus: ajout d'une image
-        if (isset($_FILES['image']) && $_FILES['image']['size']) {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
 
-            if (finfo_file($finfo, $_FILES['image']['tmp_name']) == 'image/jpeg') {
-                move_uploaded_file($_FILES['image']['tmp_name'], 'upload/' . $_FILES['image']['name']);
+    // Bonus: ajout d'une image
+    if (isset($_FILES['image']) && $_FILES['image']['size']) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
 
-                $new_event['image'] = $_FILES['image']['name'];
-            }
+        if (finfo_file($finfo, $_FILES['image']['tmp_name']) == 'image/jpeg') {
+            move_uploaded_file($_FILES['image']['tmp_name'], 'upload/' . $_FILES['image']['name']);
+
+            $image_name = $_FILES['image']['name'];
         }
     } else {
         $image_name = null;
@@ -39,21 +46,20 @@ if (isset($_REQUEST['id']) && isset($_REQUEST['date']) && isset($_REQUEST['title
     $id = $_REQUEST['id'];
     $date = $_REQUEST['date'];
     $title = $_REQUEST['title'];
-    if (isset($_REQUEST['image']) && $_REQUEST['image']) {
-        $image_name = $_REQUEST['image'];
-        // Bonus: ajout d'une image
-        if (isset($_FILES['image']) && $_FILES['image']['size']) {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
 
-            if (finfo_file($finfo, $_FILES['image']['tmp_name']) == 'image/jpeg') {
-                move_uploaded_file($_FILES['image']['tmp_name'], 'upload/' . $_FILES['image']['name']);
+    // Bonus: ajout d'une image
+    if (isset($_FILES['image']) && $_FILES['image']['size']) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
 
-                $new_event['image'] = $_FILES['image']['name'];
-            }
+        if (finfo_file($finfo, $_FILES['image']['tmp_name']) == 'image/jpeg') {
+            move_uploaded_file($_FILES['image']['tmp_name'], 'upload/' . $_FILES['image']['name']);
+
+            $image_name = $_FILES['image']['name'];
         }
     } else {
         $image_name = null;
     }
+
 
     $db->exec("UPDATE events SET date='" . $date . "',title='" . $title . "',image_name='" . $image_name . "' WHERE id='" . $id . "'");
 
@@ -486,6 +492,7 @@ setcookie('current_year', $current_year, time() + 60 * 60 * 24 * 30); // 30j en 
         if (isset($_REQUEST['id']) && isset($_REQUEST['action']) && $_REQUEST['action'] == 'update') {
             //saveUPDATE
             $id = $_REQUEST['id'];
+            echo'<h3>UPDATE</h3>';
             echo '<input type="hidden" name="action" value="saveUpdate"/>';
             echo '<input type="hidden" name="id" value="' . $id . '"/>';
 
@@ -511,6 +518,7 @@ setcookie('current_year', $current_year, time() + 60 * 60 * 24 * 30); // 30j en 
         } else {
             // Save normal
             ?>
+            <h3>INSERT</h3>
             <input type="hidden" name="action" value="save"/>
             <p>
                 <label for="date">Date</label>
@@ -568,7 +576,7 @@ setcookie('current_year', $current_year, time() + 60 * 60 * 24 * 30); // 30j en 
 
                     // Bonus
                     if (isset($ev['image_name']) && $ev['image_name'])
-                        echo '<br/><img src="upload/' . $ev['image_name'] . '" width="50" />';
+                        echo '<br/><img src="upload/' . $ev['image_name'] . 'jpg" width="50" />';
 
                     echo '</li>';
 

@@ -1,13 +1,5 @@
 <?php
 
-//TODO: Cookies for users...
-/*
- * – Pas de connexion, identifiés par cookie
-    – Ils peuvent voir tous les événements mais uniquement
-    modifier leurs événements
-    – Un administrateur a tous les droits
- */
-
 session_start();
 
 // numéro cookie admin : 1

@@ -8,6 +8,20 @@
     – Un administrateur a tous les droits
  */
 
+session_start();
+
+// numéro cookie admin : 1
+$adminCookie = 1;
+
+// L'utilisateur est-il identifié?
+if (!isset($_COOKIE['user'])) {
+    // Si non, attribution d'une chaine aléatoire
+    setcookie('user', rand(), time() + 60 * 60 * 24 * 30); // 30j en secondes
+} else {
+    // Si oui, on prolonge de 30j le cookie
+    setcookie('user', $_COOKIE['user'], time() + 60 * 60 * 24 * 30); // 30j en secondes
+}
+
 
 // Connexion db
 try {
@@ -37,7 +51,7 @@ if (isset($_REQUEST['date']) && isset($_REQUEST['title']) && isset($_REQUEST['ac
         $image_name = null;
     }
     //execution de la requete avec les variable récupérées dans l'url
-    $db->exec("INSERT INTO events(date,title,image_name) VALUES('" . $date . "','" . $title . "','" . $image_name . "')");
+    $db->exec("INSERT INTO events(date,title,image_name,creator) VALUES('" . $date . "','" . $title . "','" . $image_name . "','" . $_COOKIE['user'] . "')");
 }
 
 // UPDATE
@@ -72,17 +86,6 @@ if (isset($_REQUEST['id']) && isset($_REQUEST['action']) && $_REQUEST['action'] 
     $db->exec("DELETE FROM events WHERE id='" . $id . "'");
 }
 
-
-session_start();
-
-// L'utilisateur est-il identifié?
-if (!isset($_COOKIE['user'])) {
-    // Si non, attribution d'une chaine aléatoire
-    setcookie('user', rand(), time() + 60 * 60 * 24 * 30); // 30j en secondes
-} else {
-    // Si oui, on prolonge de 30j le cookie
-    setcookie('user', $_COOKIE['user'], time() + 60 * 60 * 24 * 30); // 30j en secondes
-}
 
 // Mois courant passé par paramètre
 if (isset($_REQUEST['month'])) {
@@ -492,7 +495,7 @@ setcookie('current_year', $current_year, time() + 60 * 60 * 24 * 30); // 30j en 
         if (isset($_REQUEST['id']) && isset($_REQUEST['action']) && $_REQUEST['action'] == 'update') {
             //saveUPDATE
             $id = $_REQUEST['id'];
-            echo'<h3>UPDATE</h3>';
+            echo '<h3>UPDATE</h3>';
             echo '<input type="hidden" name="action" value="saveUpdate"/>';
             echo '<input type="hidden" name="id" value="' . $id . '"/>';
 
@@ -541,6 +544,13 @@ setcookie('current_year', $current_year, time() + 60 * 60 * 24 * 30); // 30j en 
 
         <button type="submit">Valider</button>
     </form>
+    <!-- Ouverture d'une fenêtre lors du clic sur modi ou suppression sans les droits -->
+    <script>
+        function openWindow() {
+            var myWindow = window.open("Action impossible", "MsgWindow", "width=500,height=10");
+            myWindow.document.write("<p style='color:red;'>Vous n'avez pas les droits nécessaires pour effectuer cette action sur cet événement !</p>");
+        }
+    </script>
 
     <div class="wrapp" id="events_list">
         <h2>Evénements</h2>
@@ -562,7 +572,11 @@ setcookie('current_year', $current_year, time() + 60 * 60 * 24 * 30); // 30j en 
                     echo '<form method="post" enctype="multipart/form-data">';
                     echo '<input type="hidden" name="action" value="update"/>';
                     echo "<input type='hidden' name='id' value='" . $ev['id'] . "'/>";
-                    echo '<button type="submit">Modif</button>';
+                    if ($_COOKIE['user'] == $ev['creator'] || $_COOKIE['user'] == $adminCookie) {
+                        echo '<button type="submit">Modif</button>';
+                    } else {
+                        echo '<button onclick="openWindow()" style="background-color: gray;" type="button">Modif</button>';
+                    }
                     echo '</form>';
 
 
@@ -570,7 +584,11 @@ setcookie('current_year', $current_year, time() + 60 * 60 * 24 * 30); // 30j en 
                     echo '<form method="post" enctype="multipart/form-data">';
                     echo '<input type="hidden" name="action" value="delete"/>';
                     echo "<input type='hidden' name='id' value='" . $ev['id'] . "'/>";
-                    echo '<button type="submit">Suppr</button>';
+                    if ($_COOKIE['user'] == $ev['creator'] || $_COOKIE['user'] == $adminCookie) {
+                        echo '<button type="submit">Suppr</button>';
+                    } else {
+                        echo '<button onclick="openWindow()" style="background-color: gray;" type="button">Suppr</button>';
+                    }
                     echo '</form>';
 
 

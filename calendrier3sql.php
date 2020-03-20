@@ -1,5 +1,13 @@
 <?php
 
+//TODO: Cookies for users...
+/*
+ * – Pas de connexion, identifiés par cookie
+    – Ils peuvent voir tous les événements mais uniquement
+    modifier leurs événements
+    – Un administrateur a tous les droits
+ */
+
 session_start();
 
 // numéro cookie admin : 1
@@ -29,13 +37,93 @@ try {
 if (isset($_REQUEST['date']) && isset($_REQUEST['title']) && isset($_REQUEST['action']) && $_REQUEST['action'] == 'save') {
     $date = $_REQUEST['date'];
     $title = $_REQUEST['title'];
-
+    //$image_name=null;
     // Bonus: ajout d'une image
     if (isset($_FILES['image']) && $_FILES['image']['size']) {
+
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
 
         if (finfo_file($finfo, $_FILES['image']['tmp_name']) == 'image/jpeg') {
             move_uploaded_file($_FILES['image']['tmp_name'], 'upload/' . $_FILES['image']['name']);
+
+
+            //img vide
+            $resultImg = imagecreatetruecolor(150, 150);
+            $resultStamp = imagecreatetruecolor(150, 150);
+
+            //transparence
+            imagesavealpha($resultStamp, true);
+            $trans_colour = imagecolorallocatealpha($resultStamp, 0, 0, 0, 127);
+            imagefill($resultStamp, 0, 0, $trans_colour);
+
+            //chargement image
+            $im = imagecreatefromjpeg('upload/' . $_FILES['image']['name']);
+
+            //recup taille iamge
+            list($width, $height) = getimagesize('upload/' . $_FILES['image']['name']);
+
+
+
+
+            //resize image (cropping)
+
+            //cf https://stackoverflow.com/questions/6891352/crop-image-from-center-php
+            function cropAlign($image, $cropWidth, $cropHeight, $horizontalAlign = 'center', $verticalAlign = 'middle') {
+                $width = imagesx($image);
+                $height = imagesy($image);
+                $horizontalAlignPixels = calculatePixelsForAlign($width, $cropWidth, $horizontalAlign);
+                $verticalAlignPixels = calculatePixelsForAlign($height, $cropHeight, $verticalAlign);
+                return imageCrop($image, [
+                    'x' => $horizontalAlignPixels[0],
+                    'y' => $verticalAlignPixels[0],
+                    'width' => $horizontalAlignPixels[1],
+                    'height' => $verticalAlignPixels[1]
+                ]);
+            }
+
+            function calculatePixelsForAlign($imageSize, $cropSize, $align) {
+                switch ($align) {
+                    case 'left':
+                    case 'top':
+                        return [0, min($cropSize, $imageSize)];
+                    case 'right':
+                    case 'bottom':
+                        return [max(0, $imageSize - $cropSize), min($cropSize, $imageSize)];
+                    case 'center':
+                    case 'middle':
+                        return [
+                            max(0, floor(($imageSize / 2) - ($cropSize / 2))),
+                            min($cropSize, $imageSize),
+                        ];
+                    default: return [0, $imageSize];
+                }
+            }
+
+            $resultImg = cropAlign($im, 150, 150, 'center', 'middle');
+
+            //old with resize : imagecopyresized($resultImg, $im, 0, 0, 0, 0, 150, 150, $width, $height);
+
+
+            // chargement fichier watermark
+            $stamp = imagecreatefrompng("upload/watermark.png");
+
+            //recup taille stamp
+            list($width1, $height1) = getimagesize("upload/watermark.png");
+            //resize stamp
+            imagecopyresized($resultStamp, $stamp, 0, 0, 0, 0, 150, 150, $width1, $height1);
+
+            //ajout du watermark à l'image
+            imagecopy($resultImg, $resultStamp, 0, 0, 0, 0, 150, 150);
+
+            //sauvegarde de l'image
+            imagepng($resultImg, "upload/" . $_FILES['image']['name']);
+
+
+            //liberation ram
+            imagedestroy($im);
+            imagedestroy($resultImg);
+            imagedestroy($resultStamp);
+
 
             $image_name = $_FILES['image']['name'];
         }
@@ -59,6 +147,46 @@ if (isset($_REQUEST['id']) && isset($_REQUEST['date']) && isset($_REQUEST['title
 
         if (finfo_file($finfo, $_FILES['image']['tmp_name']) == 'image/jpeg') {
             move_uploaded_file($_FILES['image']['tmp_name'], 'upload/' . $_FILES['image']['name']);
+
+            //img vide
+            $resultImg = imagecreatetruecolor(150, 150);
+            $resultStamp = imagecreatetruecolor(150, 150);
+
+            //transparence
+            imagesavealpha($resultStamp, true);
+            $trans_colour = imagecolorallocatealpha($resultStamp, 0, 0, 0, 127);
+            imagefill($resultStamp, 0, 0, $trans_colour);
+
+            //chargement image
+            $im = imagecreatefromjpeg('upload/' . $_FILES['image']['name']);
+
+
+            //recup taille iamge
+            list($width, $height) = getimagesize('upload/' . $_FILES['image']['name']);
+
+            //resize image
+            imagecopyresized($resultImg, $im, 0, 0, 0, 0, 150, 150, $width, $height);
+
+
+            // chargement fichier watermark
+            $stamp = imagecreatefrompng("upload/watermark.png");
+
+            //recup taille stamp
+            list($width1, $height1) = getimagesize("upload/watermark.png");
+            //resize stamp
+            imagecopyresized($resultStamp, $stamp, 0, 0, 0, 0, 150, 150, $width1, $height1);
+
+            //ajout du watermark à l'image
+            imagecopy($resultImg, $resultStamp, 0, 0, 0, 0, 150, 150);
+
+            //sauvegarde de l'image
+            imagepng($resultImg, "upload/" . $_FILES['image']['name']);
+
+
+            //liberation ram
+            imagedestroy($im);
+            imagedestroy($resultImg);
+            imagedestroy($resultStamp);
 
             $image_name = $_FILES['image']['name'];
         }
@@ -461,12 +589,13 @@ setcookie('current_year', $current_year, time() + 60 * 60 * 24 * 30); // 30j en 
                     // Jour désactivé
                     if (in_array($current_day, $disabled)) $classes .= ' disabled';
 
+                    $event_text = '';
+
                     // Jour avec événements?
                     foreach ($events as $ev) {
                         if ($ev['date'] == $current_day->format('Y-m-d')) {
                             $classes .= ' event';
 
-                            $event_text = '';
                             //foreach ($events[$current_day->format('Y-m-d')] as $event)
                             $event_text .= $ev['title'] . '<br />';
 
@@ -586,7 +715,7 @@ setcookie('current_year', $current_year, time() + 60 * 60 * 24 * 30); // 30j en 
 
                     // Bonus
                     if (isset($ev['image_name']) && $ev['image_name'])
-                        echo '<br/><img src="upload/' . $ev['image_name'] . 'jpg" width="50" />';
+                        echo '<br/><img src="upload/' . $ev['image_name'] . '" width="50" />';
 
                     echo '</li>';
 
